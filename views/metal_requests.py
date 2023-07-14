@@ -30,3 +30,15 @@ METALS = [
 def get_all_metals():
     """ I'm retrieving all the metals"""
     return METALS
+
+def get_single_metal(id):
+    """ Variable to hold the found animal, if it exists"""
+    requested_metal = None 
+
+    for metal in METALS:
+        # Dictionaries in Python use [] notation to find a key
+        # instead of the dot notation that JavaScript used.
+        if metal["id"] == id:
+            requested_metal = metal
+
+    return requested_metal

@@ -28,3 +28,15 @@ SIZES = [
 
 def get_all_sizes():
     return SIZES
+
+def get_single_size(id):
+    """ Variable to hold the found animal, if it exists"""
+    requested_size = None 
+
+    for size in SIZES:
+        # Dictionaries in Python use [] notation to find a key
+        # instead of the dot notation that JavaScript used.
+        if size["id"] == id:
+            requested_size = size
+
+    return requested_size

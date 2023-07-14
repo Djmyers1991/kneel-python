@@ -1,9 +1,9 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from views import get_all_metals
-from views import get_all_styles
+from views import get_all_metals, get_single_metal
+from views import get_all_styles, get_single_style
 from views import get_all_orders, create_order, delete_order, update_order, get_single_order
-from views import get_all_sizes
+from views import get_all_sizes, get_single_size
 
 
 
@@ -32,21 +32,56 @@ class HandleRequests(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """Handles GET requests to the server """
-        self._set_headers(200)
         response = {}
         (resource, id) = self.parse_url(self.path)
 
         if resource == "orders":
             if id is not None:
                 response = get_single_order(id)
+                if response is not None:
+                    self._set_headers(200)
+                else: 
+                    self._set_headers(404)
+                    response = {"message": f"That order {id} was never placed ... or cancelled. THE CODE IS FINE, DAMN IT!!" } 
             else:
+                self._set_headers(200)
                 response = get_all_orders()
-        elif self.path == "/metals":
-            response = get_all_metals()
-        elif self.path == "/styles":
-            response = get_all_styles()
-        elif self.path == "/sizes":
-            response = get_all_sizes()
+        elif resource == "styles":
+            if id is not None:
+                response = get_single_style(id)
+                if response is not None:
+                    self._set_headers(200)
+                else:
+                    self._set_headers(404)
+                    response = {"message": f"Style {id} don't exist. You a loser."}
+            else: 
+                self._set_headers(200)
+                response = get_all_styles()
+        elif resource == "sizes":
+            if id is not None:
+                response = get_single_size(id)
+                if response is not None:
+                    self._set_headers(200)
+                else:
+                    self._set_headers(404)
+                    response = {"message": f"Size {id} is a figment of your pitiful imagination."}
+            else:
+                self._set_headers(200)
+                response = get_all_sizes()
+
+        elif resource == "metals":
+            if id is not None:
+                response = get_single_metal(id)
+                if response is not None:
+                    self._set_headers(200)
+                else:
+                    self._set_headers(404)
+                    response = {"message": f"Metal {id} is like Brad Pitt in fight club. He don't exist."}
+
+
+            else:
+                self._set_headers(200)
+                response = get_all_metals()
         else:
             response = []
 
@@ -54,22 +89,37 @@ class HandleRequests(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handles POST requests to the server """
-        self._set_headers(201)
         
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
         post_body = json.loads(post_body)
        
         # (resource, id) = self.parse_url(self.path)
-        
+        response = {}
+        (resource, id) = self.parse_url(self.path)
+
         new_order = None
         
-        if self.path == "/orders":
-            new_order = create_order(post_body)
-            self.wfile.write(json.dumps(new_order).encode())
+        if resource == "orders":
+            if "metal_id" not in post_body:
+                self._set_headers(405)
+                response = {"message": "Bruh, where's your mettle?"}
+                self.wfile.write(json.dumps(response).encode())
+            elif "style_id" not in post_body:
+                self._set_headers(405)
+                response = {"message": "Bruh, get a sense of style."}
+                self.wfile.write(json.dumps(response).encode())
+            elif "size_id" not in post_body:
+                self._set_headers(405)
+                response = {"message": "Bruh, the size is what counts."}
+                self.wfile.write(json.dumps(response).encode())   
+            else:
+                self._set_headers(201)
+                new_order = create_order(post_body)
+                self.wfile.write(json.dumps(new_order).encode())
+
 
     def do_PUT(self):
-        """Handles PUT requests to the server """
         self._set_headers(204)
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
@@ -78,6 +128,7 @@ class HandleRequests(BaseHTTPRequestHandler):
     # Parse the URL
         (resource, id) = self.parse_url(self.path)
 
+    # Delete a single animal from the list
         if resource == "orders":
             update_order(id, post_body)
             self.wfile.write("".encode())
