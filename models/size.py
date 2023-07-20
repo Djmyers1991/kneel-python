@@ -4,5 +4,4 @@ class Size():
         self.carets = carets
         self.price = price
     
-        new_size = Size(9, 394949, 593494949)
 

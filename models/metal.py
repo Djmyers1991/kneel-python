@@ -8,4 +8,3 @@ class Metal():
         self.metal = metal
         self.price = price
        
-        new_metal = Metal(6, "9000K Gold", "10494454.5")

@@ -1,6 +1,9 @@
+import sqlite3
+import json
 from .size_requests import get_single_size
 from .style_requests import get_single_style
 from .metal_requests import get_single_metal
+from models import Order, Size, Style, Metal
 
 ORDERS = [
     {
@@ -23,51 +26,133 @@ ORDERS = [
 
 def get_single_order(id):
     """ Variable to hold the found animal, if it exists"""
-    requested_order = None
+    with sqlite3.connect("./kneel.sqlite3") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+        db_cursor.execute("""
+        SELECT
+            o.id,
+            o.style_id,
+            o.size_id,
+            o.metal_id,
+            o.time_stamp
+        FROM orders o
+        WHERE o.id = ?
+        """, (id, ))
 
-    # Iterate the ANIMALS list above. Very similar to the
-    # for..of loops you used in JavaScript.
-    for order in ORDERS:
-        # Dictionaries in Python use [] notation to find a key
-        # instead of the dot notation that JavaScript used.
-        if order["id"] == id:
-            requested_order = order
-            matching_size = get_single_size(requested_order["size_id"])
-            requested_order ["size"] = matching_size
-            matching_style = get_single_style(requested_order["style_id"])
-            requested_order ["style"] = matching_style
-            matching_metal = get_single_metal(requested_order["metal_id"])
-            requested_order["metal"] = matching_metal
-            del order["style_id"]
-            del order["metal_id"]
-            del order["size_id"]
+        data = db_cursor.fetchone()
 
-    return requested_order
+        order = Order(data['id'], data['style_id'], 
+                      data['size_id'], data['metal_id'], 
+                      data['time_stamp'])
+        return order.__dict__
+
+   
 
 def get_all_orders():
-    return ORDERS
+    with sqlite3.connect("./kneel.sqlite3") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+        db_cursor.execute("""
+        SELECT
+            o.id,
+            o.size_id,
+            o.style_id,
+            o.metal_id,
+            o.time_stamp,
+            m.id metal_id,
+            m.metal,
+            m.price,
+            s.id style_id,
+            s.style,
+            s.price,
+            si.id size_id,
+            si.size,
+            si.price
+        FROM Orders o
+        JOIN Metals m, Styles s, Sizes si ON m.id = o.metal_id AND s.id = o.style_id AND si.id = o.size_id
+        """)
 
-def create_order(order):
-    max_id = ORDERS[-1]["id"]
-    correct_id = max_id + 1
-    order["id"] = correct_id
-    ORDERS.append(order)
+        orders = []
+        dataset = db_cursor.fetchall()
 
-    return order
+        for row in dataset:
+            order = Order(row['id'], row['size_id'], row['style_id'], row['metal_id'], row['time_stamp'])
+            size = Size(row['id'], row['size'], row ['price'])
+            style = Style(row['id'], row['style'], row['price'])
+            metal = Metal(row['id'], row['metal'], row['price'])
+
+            order.style = style.__dict__
+            order.style.pop('id')
+
+
+            order.size = size.__dict__
+            order.size.pop('id')
+           
+            order.metal = metal.__dict__
+            order.metal.pop('id')
+            
+
+            orders.append(order.__dict__)
+
+
+    return orders
+
+
+def create_order(new_order):
+    with sqlite3.connect("./kneel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+        db_cursor.execute("""
+        INSERT INTO Orders 
+        (style_id, size_id, metal_id, time_stamp)
+        VALUES
+            (?, ?, ?, ?)                 
+        """, (new_order['style_id'], new_order['size_id'], new_order['metal_id'], new_order['time_stamp']))
+
+        id = db_cursor.lastrowid
+
+        new_order['id'] = id
+    return new_order
+
 
 def delete_order(id):
-    order_index = -1
-    for index, order in enumerate(ORDERS):
-        if order["id"] == id: 
-            order_index = index
-        if order_index >= 0:
-            ORDERS.pop(order_index)
+    with sqlite3.connect("./kneel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+        db_cursor.execute("""
+        DELETE FROM Orders
+        WHERE id = ?
+        """, (id, ))
+
 
 def update_order(id, new_order):
-    # Iterate the ANIMALS list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, order in enumerate(ORDERS):
-        if order["id"] == id:
-            # Found the animal. Update the value.
-            ORDERS[index] = new_order
-            break
+    with sqlite3.connect("./kneel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Orders
+            SET
+                style_id = ?,
+                size_id = ?,
+                metal_id = ?,
+                time_stamp = ?
+      
+        WHERE id = ?
+        """, (new_order['style_id'], new_order['size_id'],
+              new_order['metal_id'], new_order['time_stamp'],
+              id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
+
+    
+  
+    
+    

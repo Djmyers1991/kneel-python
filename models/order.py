@@ -9,5 +9,7 @@ class Order():
         self.size_id = size_id
         self.metal_id = metal_id
         self.time_stamp = time_stamp
+        self.style = None
+        self.size = None
+        self.metal = None
 
-        new_order = Order(3, 2, 1, 1, "April 27th")
